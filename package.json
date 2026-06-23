@@ -13,6 +13,7 @@
     "build": "bun build ./src/index.ts --compile --outfile ./dist/tplink-easy-smart-switch-mcp",
     "build:win": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile ./dist/tplink-easy-smart-switch-mcp.exe",
     "capture": "bun run scripts/capture.ts",
+    "reach": "bun run scripts/reach.ts",
     "debug": "bun run scripts/debug-mcp.ts",
     "typecheck": "tsc --noEmit"
   },
