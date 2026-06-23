@@ -1,0 +1,25 @@
+{
+  "name": "tplink-easy-smart-switch-mcp",
+  "version": "0.4.7",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "tplink-easy-smart-switch-mcp": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "build": "bun build ./src/index.ts --compile --outfile ./dist/tplink-easy-smart-switch-mcp",
+    "build:win": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile ./dist/tplink-easy-smart-switch-mcp.exe",
+    "debug": "bun run scripts/debug-mcp.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "node-html-parser": "^7.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.20",
+    "typescript": "^5.9.2"
+  }
+}

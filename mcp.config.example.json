@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "tplink-easy-smart-switch": {
+      "command": "C:\\path\\to\\tplink-easy-smart-switch-mcp.exe",
+      "env": {
+        "TPLINK_HOST": "192.168.3.10",
+        "TPLINK_USERNAME": "admin",
+        "TPLINK_PASSWORD": "your-password",
+        "TPLINK_TIMEOUT_MS": "5000"
+      }
+    }
+  }
+}

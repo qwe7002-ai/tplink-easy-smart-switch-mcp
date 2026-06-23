@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<script>
+var pvid_ds = {
+state:1,
+portNum:6,
+vids:[
+1,10,11,20,21,22,23,30,40,41
+],
+count:10,
+mbrs:[
+0x36,0x31,0x38,0x36,0x22,0x22,0x22,0x12,0x24,0x30
+],
+pvids:[
+10,1,20,11,1,1
+],
+lagIds:[
+0,0,0,0,0,0
+],
+lagMbrs:[
+0,0x0
+]
+};var tip = "";
+</script>
+ <head> <meta http-equiv=Content-Type content="text/html; charset=utf-8"> <script>document.write(top.Abbrev)</script> <script type=text/javascript>incMeta(),incCss("main.css"),incCss("help.css"),incJs("tips.js"),incJs("ui.js"),incJs("help.js");var portNum=pvid_ds.portNum,qvLagIds=pvid_ds.lagIds,qvLagMbrs=pvid_ds.lagMbrs;function get_selPbm(){for(var e=0,r=1;r<=portNum;r++)1==$id("sel_"+r).checked&&(e|=1<<r-1);return e}function chkLagMbrs(e){var r=qvLagMbrs[qvLagIds[e-1]];if(r)for(var t=$id("sel_"+e).checked,i=1,d=1;d<=portNum;d++)i&r&&($id("sel_"+d).checked=t),i=i<<1>>>0}function chk_errCfg(){for(var e,r="Port ",t=0,i=0,d=get_selPbm(),s=$id("t_pvid").value-"0",c=0;c<pvid_ds.count;c++)if(s==pvid_ds.vids[c])for(e=0;e<portNum;e++)d&1<<e&&!(pvid_ds.mbrs[c]&1<<e)&&(r+=e+1+",",t++);else i++;return{misVid:i,errPorts:r,errCount:t}}function chk_pvid(){var e=$id("t_pvid").value-"0",r=/^\s*$/;return r.test($id("t_pvid").value)?(alert("请输入PVID"),-1):(r=/[A-Za-z]/).test($id("t_pvid").value)?(alert("非法PVID."),-1):1<=e&&e<=4094?0:(alert("PVID超出范围。"),-1)}function chk_portCnt(){for(var e=0,r=1;r<=portNum;r++)1==$id("sel_"+r).checked&&e++;return 0==e?-1:0}function setPvid(){var e=$id("t_pvid").value-"0";return pvid_ds.state?0==chk_pvid()&&(0!=chk_portCnt()?(alert("请至少选择一个端口。"),!1):(chk_errCfg(),location.href="vlanPvidSet.cgi?pbm="+get_selPbm()+"&pvid="+e+"&token="+top.g_tid,!0)):(alert("设置PVID前应先使能802.1Q VLAN！"),!1)}function doSelAll(){for(var e=$id("selAll").checked,r=1;r<=portNum;r++)$id("sel_"+r).checked=e;return!0}</script> </head> <body> <div id=div_tip_mask class=TIP_MASK> <div id=div_tip_svr class=TIP><span id=sp_tip_svr class=TIP_CONTENT></span></div> </div> <fieldset> <legend>802.1Q VLAN PVID设置</legend> <div id=div_sec_title> <table class=BORDER> <tr class=TABLE_HEAD> <td class=TD_FIRST_COL width=100px>选择</td> <td class=TD_FIRST_COL width=100px>端口</td> <td class=TD_FIRST_COL width=100px>PVID</td> </tr> <tr class=TABLE_HEAD> <td><input type=checkbox id=selAll name=selAll onclick=doSelAll()></td> <td></td> <td><input id=t_pvid size=4 maxlength=4 name=pvid></td> </tr> <script type=text/javascript>for(var lagPort,i=1;i<=portNum;i++)lagPort="端口"+i,qvLagIds[i-1]&&(lagPort+=" (LAG"+qvLagIds[i-1]+")"),docW("<tr>"),docW("<td><input type=checkbox name=sel_"+i+" id=sel_"+i+' onClick="chkLagMbrs('+i+');" value=1></td>'),docW("<td>"+lagPort+"</td>"),docW("<td>"+pvid_ds.pvids[i-1]+"</td>"),docW("</tr>")</script> </table> <table class=BTN_WRAPPER align=center> <tr> <td class=BTN_WRAPPER> <a class=BTN> <input type=submit value=应用 name=apply class=BTN_NORMAL_BTN onclick="return setPvid()"> </a> </td> <td class=SBLANK></td> <td> <a class=BTN> <input type=button value=帮助 name=help class=BTN_NORMAL_BTN onclick='doShowHelp("div_sec_title","div_help_lan_svr","Vlan8021QPVIDHelpRpm.htm")'> </a> </td> </tr> </table> <table class=BOTTOM_LINE> <tr><td class=BOTTOM_LINE></tr> <tr><td><span class=BOLDER>注意：</span></tr> <tr><td><span class=NORMAL>1、缺省情况下所有端口的PVID都是1。</span></tr> <tr><td><span class=NORMAL>2、当802.1Q VLAN被禁用后，所有端口的PVID会被恢复到1。</span></tr> </table> </div></fieldset> <script>ShowHelp('<span class="HELP_TITLE" id="t_help_title">802.1Q VLAN PVID设置</span> ')</script>   <script>window.onload=function(){new Drag("div_help_lan_svr","div_help_lan_svr")},""!=tip&&(ShowTips("sp_tip_svr",tip),startDownScroll("div_tip_svr"))</script> 

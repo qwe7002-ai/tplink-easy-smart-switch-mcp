@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<script>
+var tip="";
+</script>
+ <head> <meta http-equiv=Content-Type content="text/html; charset=utf-8"> <script>document.write(top.Abbrev)</script> <script type=text/javascript>function doSaving(){return confirm(js_confirm_saveconfig="确认保存配置吗？")?($id("t_to_save").innerHTML="保存配置到FLASH......",document.system_act.action_op.value="save",document.system_act.token.value=top.g_tid,document.system_act.submit(),!0):!($id("t_to_save").innerHTML="你取消了操作。")}incCss("main.css"),incJs("tips.js")</script> </head> <body> <div> <div id=autoHeight class=AUTOHEIGHT_MAIN> <fieldset> <legend>配置保存</legend> <div class=SBLANK></div> <div class=container> <span id=t_to_save class="NORMAL center"></span> <table class=BTN_WRAPPER align=center> </table> </div> </fieldset> <form name=system_act action=savingconfig.cgi method=post> <input name=action_op type=hidden> <input type=hidden id=token name=token> </form> </div> </div>   <script>""!=tip?(tip="Operation successful."==tip?"保存配置成功。":"保存配置失败。",$id("t_to_save").innerHTML=tip):doSaving()</script>

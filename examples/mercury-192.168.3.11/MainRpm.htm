@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<script>
+var info_ds = {
+descriStr:["SE106 Pro"],
+macStr:["D4:84:09:E7:5B:C9"],
+firmwareStr:["1.0.0 Build 20240812 Rel.65021"],hardwareStr:["SE106 Pro"],
+dhcpEnable:0,
+ipStr:["192.168.3.11"],
+netmaskStr:["255.255.255.0"],
+gatewayStr:[""],
+dnsEnable: 0,
+dnsStr:["114.114.114.114"],
+workTime:["192 day - 13 hour - 13 min - 45 sec"],
+
+};
+var mngt_switch = "0";
+var tip = "";
+var cloudMngtFlag = 0;
+var max_port_num = 6;
+var port_middle_num  = 6;
+var port_info = {
+state:[1,1,1,1,1,1,0,0],
+spd_cfg:[1,1,1,1,1,1,0,0],
+spd_act:[7,6,0,0,8,8,0,0],
+fc_cfg:[0,0,0,0,0,0,0,0],
+fc_act:[0,0,0,0,0,0,0,0],
+port_type:[0,0,0,0,1,1,0,0],
+is_poe_port:[0,0,0,0,0,0,0,0],
+is_uplink:[0,0,0,0,0,0,0,0],
+rx_rate:[12,0,0,0,10,5,0,0],
+tx_rate:[16,0,0,0,7,6,0,0],
+}
+var port_uplink_num = 0;
+var port_pos = [ 
+[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]]; 
+var qvlan = 0;
+var qvlan_ds = {
+state:1,
+portNum:6,
+portmask:[
+63,63,51,49,33,33,1,48
+],
+vlanList:[
+1,6,20,21,22,23,30,100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+],
+count:8,
+maxVids:32,
+};
+var loop = 0;
+var loopPortConf = {
+loopbackEnable:1,
+maxTrunkNum:1,
+portNum:0,
+ports : [0,0,0,0,0,0]
+};
+var trunk = 0;
+var trunkConf = {
+maxTrunkNum:1,
+portNum:6,
+portStr_g1:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+};
+var poeCfg ={
+poePortNum : 0,
+power:[],
+state:[]
+};
+var cloud_config = 0;
+var cloud_status = 0;
+var nms_status = 0;
+</script>
+ <head> <meta http-equiv=Content-Type content="text/html; charset=utf-8"> <script>document.write(top.Abbrev)</script> <script type=text/javascript>function LoadMain(){new Drag("div_help_lan_svr","div_help_lan_svr")}incCss("main.css"),incCss("help.css"),incCss("MainRpm.css"),incJs("ui.js"),incJs("tips.js"),incJs("help.js"),incJs("MainRpm.js")</script> </head> <body onload=LoadMain()> <div id=div_tip_mask class=TIP_MASK> <div id=div_tip_svr class=TIP><span id=sp_tip_svr class=TIP_CONTENT></span></div> </div> <div id=div_sec_title> <div class=port-area> <a class="BTN port-desc"> <input type=button value=端口图示说明 name=help class=BTN_NORMAL_BTN onclick='doShowHelp("div_sec_title","div_help_lan_svr","PortImageHelpRpm.htm")'> </a> <div class=port-images> <script type=text/javascript>loadPortImage()</script> </div> </div> </div> <fieldset> <legend><a href=/SystemInfoRpm.htm class=BTN_NORMAL_BTN onclick='setMenuShow("System","SystemInfoRpm")'>设备信息</a></legend> <table class=BORDER width=100%> <tbody> <tr> <td class=TD_FIRST_COL colspan=2><span class=NORMAL>设备型号：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_hardwareversion></span></td> <td class=TD_FIRST_COL colspan=2><span class=NORMAL>软件版本：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_firewareversion></span></td> </tr> <tr> <td class=TD_FIRST_COL colspan=2><span class=NORMAL>IP地址：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_ip_address>192.168.0.1</span></td> <td class=TD_FIRST_COL colspan=2><span class=NORMAL>运行时间：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_workTime>00小时00分00秒</span></td> </tr> <tr> <td class=TD_FIRST_COL colspan=2><span class=NORMAL>子网掩码：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_ip_netmask>255.255.255.0</span></td> <td class=TD_FIRST_COL colspan=2><span class=NORMAL>MAC地址：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_macaddress></span></td> </tr> <tr> <td class=TD_FIRST_COL colspan=2><span class=NORMAL id=t_gateway>默认网关：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=txt_ip_gateway>192.168.0.1</span></td> <td class=TD_FIRST_COL colspan=2><span class=NORMAL id=t_devicetype>设备描述：</span></td> <td class=NORMAL_TAIL colspan=2><span class=NORMAL id=tDevDscr></span></td> </tr> <tr> <script type=text/javascript>1==cloudMngtFlag&&(document.write('<td class="TD_FIRST_COL" colspan="2"><span class="NORMAL" id="t_gateway">DNS服务器：</span></td>'),document.write('<td class="NORMAL_TAIL"  colspan="2"><span class="NORMAL" id="txt_dns_address">192.168.0.1</span></td>'),document.write('<td class="TD_FIRST_COL" colspan="2"><span class="NORMAL" id="t_cloud">云状态：</span></td>'),document.write('<td class="NORMAL_TAIL"  colspan="2"><span class="NORMAL" id="cloud-status">未连接</span></td>'))</script> </tr> </tbody> </table> </fieldset> <script type=text/javascript>loadSysInfo()</script> <fieldset> <legend>端口信息</legend> <a href=/MainRpm.htm class=BTN_NORMAL_BTN>点击刷新</a> <table class=BORDER width=100%> <tbody> <tr class=TABLE_HEAD> <td colspan=5> <a href=/PortSettingRpm.htm onclick='setMenuShow("Switching","PortSettingRpm")'>端口状态</a> </td> <script type=text/javascript>0==qvlan&&document.write('<td colspan="2"><a href="/Vlan8021QRpm.htm" onclick="setMenuShow(\'Vlan\',\'Vlan8021QRpm\');">802.1Q VLAN</a></td>')</script> <td rowspan=2>收/发包速率<br>(Mbps)</td> <script type=text/javascript>0==loop&&document.write('<td rowspan="2"><a href="/LoopPreventionRpm.htm" onclick="setMenuShow(\'Monitoring\',\'LoopPreventionRpm\');">环路状态</a></td>'),0==trunk&&document.write('<td rowspan="2"><a href="/PortTrunkRpm.htm" onclick="setMenuShow(\'Switching\',\'PortTrunkRpm\');">汇聚状态</a></td>'),0<poeCfg.poePortNum&&document.write('<td colspan="4"><a href="/PoeConfigRpm.htm" onclick="setMenuShow(\'PoE\',\'PoeConfigRpm\');">PoE</a></td>')</script> </tr> <tr class=TABLE_HEAD> <td colspan=1>端口</td> <td colspan=2>配置状态</td> <td colspan=2>实际状态</td> <script type=text/javascript>0==qvlan&&document.write("<td colspan='2'>VLAN ID</td>")</script> <script type=text/javascript>0<poeCfg.poePortNum&&(document.write("<td colspan='2'>PoE功率</td>"),document.write("<td colspan='2'>操作</td>"))</script> </tr> <script type=text/javascript>loadPortInfo()</script> </tbody> </table> </fieldset> <script>ShowHelp('<span class="HELP_TITLE" id="t_help_title">端口图示说明</span>')</script>   <script>window.onload=function(){new Drag("div_help_lan_svr","div_help_lan_svr")},""!=tip&&(ShowTips("sp_tip_svr",tip),startDownScroll("div_tip_svr"))</script> 

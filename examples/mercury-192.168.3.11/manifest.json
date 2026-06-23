@@ -1,0 +1,92 @@
+{
+  "target": "http://192.168.3.11",
+  "fetchedAt": "2026-06-23T10:56:57.936Z",
+  "loginStatus": 200,
+  "note": "Read-only GET snapshots for MCP development. No cookies, session IDs, or passwords are stored.",
+  "files": [
+    {
+      "path": "/MainRpm.htm",
+      "file": "MainRpm.htm",
+      "status": 200,
+      "bytes": 6184,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/Menu.htm",
+      "file": "Menu.htm",
+      "status": 200,
+      "bytes": 2789,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/VlanPortBasicRpm.htm",
+      "file": "VlanPortBasicRpm.htm",
+      "status": 200,
+      "bytes": 3774,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/Vlan8021QRpm.htm",
+      "file": "Vlan8021QRpm.htm",
+      "status": 200,
+      "bytes": 5276,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/Vlan8021QPvidRpm.htm",
+      "file": "Vlan8021QPvidRpm.htm",
+      "status": 200,
+      "bytes": 3758,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/VlanMtuRpm.htm",
+      "file": "VlanMtuRpm.htm",
+      "status": 200,
+      "bytes": 3267,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/PortTrunkRpm.htm",
+      "file": "PortTrunkRpm.htm",
+      "status": 200,
+      "bytes": 6205,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/ConfigRpm.htm",
+      "file": "ConfigRpm.htm",
+      "status": 200,
+      "bytes": 4797,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/SavingConfigRpm.htm",
+      "file": "SavingConfigRpm.htm",
+      "status": 200,
+      "bytes": 1127,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/menuList.js",
+      "file": "assets/menuList.js",
+      "status": 200,
+      "bytes": 1406,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/pvlan.js",
+      "file": "assets/pvlan.js",
+      "status": 200,
+      "bytes": 2305,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/qvlan.js",
+      "file": "assets/qvlan.js",
+      "status": 200,
+      "bytes": 4500,
+      "looksLikeLogin": false
+    }
+  ]
+}
