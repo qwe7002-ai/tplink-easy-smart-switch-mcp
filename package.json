@@ -1,13 +1,15 @@
 {
   "name": "tplink-easy-smart-switch-mcp",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "private": true,
   "type": "module",
   "bin": {
-    "tplink-easy-smart-switch-mcp": "./src/index.ts"
+    "tplink-easy-smart-switch-mcp": "./src/index.ts",
+    "tplink-switch-manager": "./src/tui.ts"
   },
   "scripts": {
     "start": "bun run src/index.ts",
+    "tui": "bun run src/tui.ts",
     "build": "bun build ./src/index.ts --compile --outfile ./dist/tplink-easy-smart-switch-mcp",
     "build:win": "bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile ./dist/tplink-easy-smart-switch-mcp.exe",
     "debug": "bun run scripts/debug-mcp.ts",
