@@ -23,6 +23,7 @@ const PAGES = [
   { path: "/Vlan8021QPvidRpm.htm",  file: "Vlan8021QPvidRpm.htm" },
   { path: "/VlanMtuRpm.htm",        file: "VlanMtuRpm.htm" },
   { path: "/PortTrunkRpm.htm",      file: "PortTrunkRpm.htm" },
+  { path: "/MacSearchRpm.htm",      file: "MacSearchRpm.htm" },
   { path: "/SavingConfigRpm.htm",   file: "SavingConfigRpm.htm" },
   { path: "/ConfigRpm.htm",         file: "ConfigRpm.htm" },
   { path: "/menuList.js",           file: "assets/menuList.js" },

@@ -29,6 +29,16 @@ Read-only tools:
 - `get_port_status`: Return port status
 - `get_vlan_status`: Return port VLAN, 802.1Q VLAN, PVID, and MTU VLAN status
 - `get_trunk_status`: Return port trunking/LAG status
+- `get_mac_table`: Return the MAC address (forwarding) table from `MacSearchRpm.htm`
+- `analyze_topology`: Analyze two or more cascaded switches and report the inter-switch link port, the upstream/downstream relationship, and the VLAN relationship across the link
+
+Topology analysis works by logging into each switch and correlating their MAC
+address tables: the port on switch A that has learned switch B's management MAC
+(and vice versa) is the inter-switch link. The downstream switch is the one
+whose link port has learned more of the network's MAC addresses. When the MAC
+table cannot be read, link detection falls back to the active SFP/10G port on
+each switch as a low-confidence guess. These Easy Smart switches have no LLDP,
+so this in-band correlation is the available signal.
 
 Configuration CGI tools:
 

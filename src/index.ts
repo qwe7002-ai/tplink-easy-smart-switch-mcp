@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { SwitchClient } from "./client.js";
+import { analyzeTopology } from "./topology.js";
 import { parseSetDeleteMode, parsePortList } from "./utils.js";
 import { resolveCredentials, listSwitches, getDefaultSwitchName } from "./config.js";
 
@@ -101,6 +102,54 @@ server.registerTool(
     const r = resolveInput(input);
     const client = new SwitchClient(r.host);
     return jsonResult(await client.getTrunkStatus(r.username, r.password, r.debug ?? false));
+  },
+);
+
+server.registerTool(
+  "get_mac_table",
+  {
+    title: "Get MAC Address Table",
+    description: "Read the switch MAC address (forwarding) table from MacSearchRpm.htm. Returns which MAC addresses are learned on which ports/VLANs. Useful for tracing what is connected to each port.",
+    inputSchema: connectionInput,
+  },
+  async (input) => {
+    const r = resolveInput(input);
+    const client = new SwitchClient(r.host);
+    return jsonResult(await client.getMacTable(r.username, r.password, r.debug ?? false));
+  },
+);
+
+server.registerTool(
+  "analyze_topology",
+  {
+    title: "Analyze Switch Topology",
+    description:
+      "Analyze the topology relationship between two (or more) cascaded switches. Logs into each switch, reads its identity, ports, 802.1Q VLAN/PVID and MAC address table, then finds the inter-switch link port, infers the upstream/downstream relationship, and reports the VLAN relationship across the link. Link detection relies on each switch having learned the other's management MAC; if the MAC tables are unreadable it falls back to the active SFP/10G port as a low-confidence guess.",
+    inputSchema: {
+      hosts: z.array(z.string()).min(2).optional().describe('The switches to analyze, by configured name or address, for example ["192.168.3.10", "192.168.3.11"]. Defaults to the two switches in the local config when omitted.'),
+      username: z.string().optional().describe("Shared login username, used when a switch has no per-switch credentials in the config."),
+      password: z.string().optional().describe("Shared login password, used when a switch has no per-switch credentials in the config."),
+    },
+  },
+  async (input) => {
+    const hosts = input.hosts && input.hosts.length >= 2
+      ? input.hosts
+      : listSwitches().map((s) => s.name);
+    if (hosts.length < 2) {
+      return jsonResult({
+        error: "analyze_topology needs at least two switches. Pass hosts: [\"a\", \"b\"] or configure two switches with the TUI (bun run tui).",
+      });
+    }
+
+    const facts = await Promise.all(
+      hosts.map(async (host) => {
+        const r = resolveCredentials(host, input.username, input.password);
+        const client = new SwitchClient(r.host);
+        return client.collectTopologyFacts(r.username, r.password);
+      }),
+    );
+
+    return jsonResult(analyzeTopology(facts));
   },
 );
 
