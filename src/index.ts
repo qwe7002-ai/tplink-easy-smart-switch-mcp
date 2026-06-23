@@ -371,5 +371,28 @@ server.registerTool(
   },
 );
 
+// This is an MCP stdio server: it speaks JSON-RPC over stdin/stdout and prints
+// nothing human-readable on success. When a person launches it directly in a
+// terminal (stdin is a TTY rather than a pipe from an MCP client), it would
+// otherwise appear to hang with no output. Print guidance to stderr so the run
+// is not silent. stderr is safe to write to because the JSON-RPC channel is stdout.
+if (process.stdin.isTTY) {
+  console.error(
+    [
+      "tplink-easy-smart-switch-mcp is a Model Context Protocol (MCP) server.",
+      "It communicates over stdin/stdout using JSON-RPC and is meant to be launched",
+      "by an MCP client (see the MCP Client Example in README.md), not run by hand.",
+      "",
+      "It is now waiting for JSON-RPC on stdin and will look idle. Press Ctrl+C to exit.",
+      "",
+      "If you wanted to:",
+      "  - manage switches (add/remove/test):   bun run tui",
+      "  - call a tool from the command line:    bun run debug -- --tool get_switch_status",
+      "  - list available tools:                 bun run debug",
+      "",
+    ].join("\n"),
+  );
+}
+
 const transport = new StdioServerTransport();
 await server.connect(transport);
