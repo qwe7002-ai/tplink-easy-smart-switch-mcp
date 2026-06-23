@@ -1,6 +1,6 @@
 {
   "target": "http://192.168.3.11",
-  "fetchedAt": "2026-06-23T10:56:57.936Z",
+  "fetchedAt": "2026-06-23T13:20:49.559Z",
   "loginStatus": 200,
   "note": "Read-only GET snapshots for MCP development. No cookies, session IDs, or passwords are stored.",
   "files": [
@@ -54,10 +54,10 @@
       "looksLikeLogin": false
     },
     {
-      "path": "/ConfigRpm.htm",
-      "file": "ConfigRpm.htm",
+      "path": "/MacSearchRpm.htm",
+      "file": "MacSearchRpm.htm",
       "status": 200,
-      "bytes": 4797,
+      "bytes": 2102,
       "looksLikeLogin": false
     },
     {
@@ -65,6 +65,13 @@
       "file": "SavingConfigRpm.htm",
       "status": 200,
       "bytes": 1127,
+      "looksLikeLogin": false
+    },
+    {
+      "path": "/ConfigRpm.htm",
+      "file": "ConfigRpm.htm",
+      "status": 200,
+      "bytes": 4797,
       "looksLikeLogin": false
     },
     {

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<script>
+var mac_ds = {
+is_qvlan:1,
+macNum:0,
+mac_info:[
+{mac:"0", vid:0, port:0}
+]
+};var tip="";
+var vlanSc = 0;
+</script>
+ <head> <meta http-equiv=Content-Type content="text/html; charset=utf-8"> <script>document.write(top.Abbrev)</script> <script type=text/javascript>incCss("main.css"),incCss("help.css"),incJs("ui.js"),incJs("help.js"),incJs("tips.js"),incJs("MacSearch.js")</script> </head> <body> <div id=div_tip_mask class=TIP_MASK> <div id=div_tip_svr class=TIP><span id=sp_tip_svr class=TIP_CONTENT></span></div> </div> <fieldset> <legend>MAC地址搜索</legend> <div id=div_sec_title> <form name=mac_address_search action=mac_address_search.cgi enctype=multipart/form-data> <table class=BORDER> <tr> <td class=TD_FIRST_COL width=120>MAC地址(必填)</td> <script type=text/javascript>0==vlanSc&&document.write('<td class="TD_FIRST_COL" width="120">VLAN(1-4094)</td>')</script> </tr> <tr> <td class=NORMAL_TAIL> <input class=TEXT_ENABLE id=txt_macAddress_search name=txt_macAddress_search size=17 maxlength=18> </td> <script type=text/javascript>0==vlanSc&&document.write('<td class="NORMAL_TAIL"><input class="TEXT_ENABLE" id="txt_vid_search"  name="txt_vid_search" type="text" value="" size="17" maxlength="18" /></td>')</script> </tr> </table> <input type=hidden id=token name=token> </form> <script type=text/javascript>0==vlanSc&&loadvlan()</script> <table class=BTN_WRAPPER align=center> <tr> <td class=BTN_WRAPPER> <a class=BTN> <input type=button value=查询 name=apply onclick=doSubmit() class=BTN_NORMAL_BTN> </a> <td> <td class=BTN_WRAPPER> <a class=BTN> <input type=button class=BTN_NORMAL_BTN value=帮助 name=help onclick='doShowHelp("div_sec_title","div_help_lan_svr","MacSearchHelpRpm.htm")'> </a> </td> </tr> </table> <script type=text/javascript>tableInit()</script> </div> </fieldset> <script>ShowHelp('<span class="HELP_TITLE" id="t_help_title">MAC搜索</span>')</script>   <script>""!=tip&&(ShowTips("sp_tip_svr",tip),startDownScroll("div_tip_svr"))</script> <script>window.onload=function(){new Drag("div_help_lan_svr","div_help_lan_svr")}</script> 

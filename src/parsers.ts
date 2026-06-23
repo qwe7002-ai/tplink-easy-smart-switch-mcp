@@ -150,6 +150,186 @@ export function parsePvidPage(html: string): Record<string, unknown> | null {
   };
 }
 
+const MAC_RE = /^[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}$/;
+
+export function normalizeMac(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!MAC_RE.test(trimmed)) return null;
+  return trimmed.replace(/-/g, ":").toUpperCase();
+}
+
+export interface MacTableEntry {
+  mac: string;
+  port: number | null;
+  vlan: number | null;
+  type: string | null;
+}
+
+export interface MacTableResult {
+  readable: boolean;
+  count: number;
+  entries: MacTableEntry[];
+  source: "js_object" | "html_table" | "mac_search" | "none";
+  note?: string;
+  tip?: string | null;
+}
+
+export function parseMacSearchPage(html: string): MacTableResult {
+  const raw = extractJsObject(html, "mac_ds");
+  const tip = extractJsStringVar(html, "tip");
+
+  if (raw) {
+    const count = asNumber(raw.macNum) ?? 0;
+    const info = Array.isArray(raw.mac_info) ? raw.mac_info.filter(isRecord) : [];
+    const entries = info.slice(0, count).flatMap((entry) => {
+      const mac = normalizeMac(entry.mac);
+      if (!mac) return [];
+      return [{
+        mac,
+        vlan: asNumber(entry.vid),
+        port: asNumber(entry.port),
+        type: null,
+      }];
+    });
+
+    return {
+      readable: true,
+      count: entries.length,
+      entries,
+      source: "mac_search",
+      tip,
+      note: tip || (entries.length === 0 ? "MAC search completed; no matching entries were returned." : undefined),
+    };
+  }
+
+  const tableResult = parseMacTableFromHtml(html);
+  if (tableResult) return { ...tableResult, tip };
+
+  return {
+    readable: false,
+    count: 0,
+    entries: [],
+    source: "none",
+    tip,
+    note: "Could not locate a MAC search result on the page.",
+  };
+}
+
+// The MAC address table page (MacSearchRpm.htm) is not part of the captured
+// samples and its exact JS variable name differs across firmware. Rather than
+// hard-code a name, anchor on the array of MAC-address strings and pair it with
+// sibling arrays for port/vlan/type. Falls back to the rendered HTML table.
+export function parseMacTablePage(html: string): MacTableResult {
+  const jsResult = parseMacTableFromJs(html);
+  if (jsResult) return jsResult;
+
+  const tableResult = parseMacTableFromHtml(html);
+  if (tableResult) return tableResult;
+
+  return {
+    readable: false,
+    count: 0,
+    entries: [],
+    source: "none",
+    note: "Could not locate a MAC address table on the page. The address table may be empty, require a search query, or use an unrecognized layout; re-run with debug to capture the raw page.",
+  };
+}
+
+function parseMacTableFromJs(html: string): MacTableResult | null {
+  const names = new Set<string>();
+  for (const match of html.matchAll(/var\s+([A-Za-z_$][\w$]*)\s*=\s*\{/g)) {
+    if (match[1]) names.add(match[1]);
+  }
+
+  for (const name of names) {
+    const obj = extractJsObject(html, name);
+    if (!obj) continue;
+
+    // Find the property whose value is an array dominated by MAC strings.
+    let macKey: string | null = null;
+    let macs: Array<string | null> = [];
+    for (const [key, value] of Object.entries(obj)) {
+      if (!Array.isArray(value)) continue;
+      const normalized = value.map(normalizeMac);
+      const hits = normalized.filter((m) => m !== null).length;
+      if (hits > 0 && hits >= Math.ceil(value.length / 2)) {
+        macKey = key;
+        macs = normalized;
+        break;
+      }
+    }
+    if (!macKey) continue;
+
+    const portArr = pickSiblingArray(obj, macKey, macs.length, /port|prt/i);
+    const vlanArr = pickSiblingArray(obj, macKey, macs.length, /vlan|vid|fid/i);
+    const typeArr = pickSiblingArray(obj, macKey, macs.length, /type|state|status|sta/i);
+
+    const entries: MacTableEntry[] = [];
+    macs.forEach((mac, index) => {
+      if (mac === null) return;
+      entries.push({
+        mac,
+        port: asNumber(portArr?.[index]),
+        vlan: asNumber(vlanArr?.[index]),
+        type: typeArr?.[index] !== undefined ? String(typeArr[index]) : null,
+      });
+    });
+
+    if (entries.length > 0) {
+      return { readable: true, count: entries.length, entries, source: "js_object" };
+    }
+  }
+
+  return null;
+}
+
+// Pull a sibling array of the expected length, preferring keys that match the
+// hint pattern, then falling back to the first numeric array of equal length.
+function pickSiblingArray(
+  obj: Record<string, unknown>,
+  excludeKey: string,
+  length: number,
+  hint: RegExp,
+): unknown[] | null {
+  let fallback: unknown[] | null = null;
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === excludeKey || !Array.isArray(value) || value.length !== length) continue;
+    if (!value.some((item) => typeof item === "number")) continue;
+    if (hint.test(key)) return value;
+    if (fallback === null) fallback = value;
+  }
+  return fallback;
+}
+
+function parseMacTableFromHtml(html: string): MacTableResult | null {
+  const root = parse(html, { lowerCaseTagName: true, comment: false });
+  const entries: MacTableEntry[] = [];
+
+  for (const row of root.querySelectorAll("tr")) {
+    const cells = row.querySelectorAll("th,td").map((cell) => cleanText(cell.text));
+    const macCell = cells.find((cell) => normalizeMac(cell) !== null);
+    const mac = normalizeMac(macCell);
+    if (!mac) continue;
+    const numbers = cells
+      .filter((cell) => cell !== macCell && /^\d+$/.test(cell))
+      .map((cell) => Number(cell));
+    // Convention on these pages: VLAN/FID column precedes the port column.
+    const vlan = numbers.length >= 2 ? numbers[0] : null;
+    const port = numbers.length >= 2 ? numbers[1] : numbers[0] ?? null;
+    entries.push({ mac, port: port ?? null, vlan, type: null });
+  }
+
+  if (entries.length === 0) return null;
+  return {
+    readable: true,
+    count: entries.length,
+    entries,
+    source: "html_table",
+    note: "Parsed from the rendered HTML table; verify the VLAN/port column order against the device.",
+  };
+}
+
 export function parsePortTrunkPage(html: string): Record<string, unknown> | null {
   const trunk = extractJsObject(html, "trunk_conf");
   if (!trunk) return null;
@@ -353,6 +533,7 @@ export function looksLikeLoginPage(text: string): boolean {
 export function extractToken(html: string): string | null {
   const patterns = [
     /(?:top\.)?g_tid\s*=\s*["']([^"']+)["']/i,
+    /(?:top\.)?g_tid\s*=\s*([A-Za-z0-9_-]+)(?=[\s;<]|$)/i,
     /name=["']token["'][^>]*value=["']([^"']+)["']/i,
     /value=["']([^"']+)["'][^>]*name=["']token["']/i,
   ];
@@ -442,6 +623,11 @@ function findMatchingBrace(text: string, start: number): number {
 function extractJsNumber(html: string, name: string): number | null {
   const match = html.match(new RegExp(`var\\s+${name}\\s*=\\s*"?(-?\\d+)"?`, "m"));
   return match ? Number(match[1]) : null;
+}
+
+function extractJsStringVar(html: string, name: string): string | null {
+  const match = new RegExp(`var\\s+${name}\\s*=\\s*(["'])((?:\\\\.|(?!\\1)[\\s\\S])*)\\1`, "m").exec(html);
+  return match?.[2] ? unescapeJsString(match[2]) : null;
 }
 
 function looksLikeSaveConfigAction(action: string, context: string): boolean {

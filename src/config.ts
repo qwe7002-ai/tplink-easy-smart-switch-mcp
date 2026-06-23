@@ -28,9 +28,21 @@ export function resolveCredentials(
   username?: string,
   password?: string,
 ): { host?: string; username?: string; password?: string } {
-  if (host) return { host, username, password };
-
   const config = loadConfig();
+
+  // When a host is supplied it may be a raw address or the name/host of a
+  // configured switch. Look it up so a configured name resolves to its address
+  // and saved credentials instead of being used verbatim as a hostname.
+  if (host) {
+    const match = config.switches.find((s) => s.name === host || s.host === host);
+    if (!match) return { host, username, password };
+    return {
+      host: match.host,
+      username: username ?? match.username,
+      password: password ?? match.password,
+    };
+  }
+
   const entry = config.default
     ? config.switches.find((s) => s.name === config.default)
     : config.switches[0];

@@ -8,6 +8,9 @@ import {
   parseQvlanPage,
   parsePvidPage,
   parsePortTrunkPage,
+  parseMacTablePage,
+  parseMacSearchPage,
+  normalizeMac,
   formatHtmlPage,
   discoverSaveConfigEndpoint,
   describeWriteEndpoints,
@@ -40,6 +43,7 @@ import {
   summarizeLogin,
 } from "./plans.js";
 import { uniquePaths } from "./utils.js";
+import type { SwitchFacts } from "./topology.js";
 import type { HttpResult, CgiRequestPlan } from "./types.js";
 
 export class SwitchClient {
@@ -212,6 +216,185 @@ export class SwitchClient {
       write_endpoints: describeWriteEndpoints(formatted),
       source: { path: "/PortTrunkRpm.htm", status: page.status },
       ...(debug ? { debug: { page: formatted } } : {}),
+    };
+  }
+
+  async searchMacAddress(input: {
+    username?: string;
+    password?: string;
+    mac: string;
+    vlan?: number;
+    debug?: boolean;
+  }) {
+    const login = await this.loginIfPossible(input.username, input.password);
+    const result = await this.searchMacAddressInSession(input.mac, input.vlan, input.debug ?? false);
+
+    return {
+      ...result,
+      login: summarizeLogin(login),
+    };
+  }
+
+  async searchMacAddressInSession(mac: string, vlan?: number, debug = false) {
+    const normalizedMac = normalizeMac(mac);
+    if (!normalizedMac) {
+      return {
+        target: this.target.origin,
+        reachable: true,
+        query: { mac, normalized_mac: null, vlan: vlan ?? 0 },
+        token_read: false,
+        mac_search: {
+          readable: false,
+          count: 0,
+          entries: [],
+          source: "none" as const,
+          note: "Invalid MAC address. Expected six hexadecimal octets separated by ':' or '-'.",
+        },
+        source: { path: "/mac_address_search.cgi", status: null },
+      };
+    }
+
+    const token = await this.readToken();
+    if (!token) {
+      return {
+        target: this.target.origin,
+        reachable: true,
+        query: { mac: normalizedMac, vlan: vlan ?? 0 },
+        token_read: false,
+        mac_search: {
+          readable: false,
+          count: 0,
+          entries: [],
+          source: "none" as const,
+          note: "Could not read top.g_tid/token from the switch before running MAC search.",
+        },
+        source: { path: "/mac_address_search.cgi", status: null },
+      };
+    }
+
+    const params = new URLSearchParams({
+      txt_macAddress_search: normalizedMac,
+      txt_vid_search: String(vlan ?? 0),
+      token,
+    });
+    const response = await this.fetch(`/mac_address_search.cgi?${params.toString()}`, {
+      method: "GET",
+      headers: { Referer: `${this.target.origin}/MacSearchRpm.htm` },
+    });
+    rememberCookies(this.target, response);
+    const parsed = parseMacSearchPage(response.body);
+
+    return {
+      target: this.target.origin,
+      reachable: true,
+      query: { mac: normalizedMac, vlan: vlan ?? 0 },
+      token_read: true,
+      mac_search: parsed,
+      source: { path: "/mac_address_search.cgi", status: response.status },
+      ...(debug ? { debug: { page: formatHtmlPage(response.body) } } : {}),
+    };
+  }
+
+  // Read the MAC address table using the already-authenticated session. Tries a
+  // few candidate page paths because the address table page name varies.
+  private async readMacTable() {
+    const macPaths = [
+      "/MacSearchRpm.htm", "/AddrTableRpm.htm", "/MacAddressRpm.htm",
+      "/userRpm/MacSearchRpm.htm", "/userRpm/AddrTableRpm.htm",
+    ];
+
+    let path = macPaths[0]!;
+    let status: number | null = null;
+    let mac_table = parseMacTablePage("");
+    let rawBody = "";
+
+    for (const candidate of macPaths) {
+      try {
+        const page = await this.fetchText(candidate);
+        if (page.status >= 200 && page.status < 400 && page.body.length > 0) {
+          const parsed = parseMacTablePage(page.body);
+          path = candidate;
+          status = page.status;
+          rawBody = page.body;
+          mac_table = parsed;
+          if (parsed.readable) break;
+        }
+      } catch {
+        // Try the next candidate path.
+      }
+    }
+
+    return { mac_table, path, status, rawBody };
+  }
+
+  // Gather the per-switch data needed for topology analysis in one login.
+  async collectTopologyFacts(username?: string, password?: string): Promise<SwitchFacts> {
+    const blank: SwitchFacts = {
+      target: this.target.origin,
+      ok: false,
+      identity: { mac: null, ip: null, gateway: null, model: null, description: null },
+      ports: [],
+      qvlan_enabled: null,
+      vlans: [],
+      pvids: [],
+      mac_table: parseMacTablePage(""),
+      login: { attempted: false, success: false },
+    };
+
+    const httpOpen = await tcpOpen(this.target.hostname, 80);
+    if (!httpOpen) {
+      return { ...blank, error: "HTTP 80 is not reachable" };
+    }
+
+    const login = await this.loginIfPossible(username, password);
+    const [main, qvlan, pvid] = await Promise.all([
+      this.fetchText("/MainRpm.htm"),
+      this.fetchText("/Vlan8021QRpm.htm"),
+      this.fetchText("/Vlan8021QPvidRpm.htm"),
+    ]);
+    const macResult = await this.readMacTable();
+
+    const mainData = parseMainRpmPage(main.body);
+    const qvlanData = parseQvlanPage(qvlan.body);
+    const pvidData = parsePvidPage(pvid.body);
+
+    const device = isRecord(mainData?.device) ? mainData!.device : {};
+    const rawPorts = Array.isArray(mainData?.ports) ? mainData!.ports : [];
+    const vlans = Array.isArray(qvlanData?.vlans) ? qvlanData!.vlans : [];
+    const pvidPorts = Array.isArray(pvidData?.ports) ? pvidData!.ports : [];
+
+    return {
+      target: this.target.origin,
+      ok: Boolean(mainData),
+      identity: {
+        mac: asStringOrNull(device.mac),
+        ip: asStringOrNull(device.ip),
+        gateway: asStringOrNull(device.gateway),
+        model: asStringOrNull(device.model),
+        description: asStringOrNull(device.description),
+      },
+      ports: rawPorts.filter(isRecord).map((p) => ({
+        port: Number(p.port),
+        link_up: typeof p.actual_speed_code === "number" && p.actual_speed_code > 0,
+        type: typeof p.type === "string" ? p.type : "unknown",
+        speed_code: typeof p.actual_speed_code === "number" ? p.actual_speed_code : null,
+        rx_mbps: typeof p.rx_mbps === "number" ? p.rx_mbps : null,
+        tx_mbps: typeof p.tx_mbps === "number" ? p.tx_mbps : null,
+      })),
+      qvlan_enabled: typeof qvlanData?.enabled === "boolean" ? qvlanData.enabled : null,
+      vlans: vlans.filter(isRecord).map((v) => ({
+        vid: Number(v.vid),
+        name: typeof v.name === "string" ? v.name : "",
+        tagged_ports: asNumArray(v.tagged_ports),
+        untagged_ports: asNumArray(v.untagged_ports),
+        member_ports: asNumArray(v.member_ports),
+      })),
+      pvids: pvidPorts.filter(isRecord).map((p) => ({
+        port: Number(p.port),
+        pvid: typeof p.pvid === "number" ? p.pvid : null,
+      })),
+      mac_table: macResult.mac_table,
+      login: { attempted: login.attempted, success: login.success_hint ?? false },
     };
   }
 
@@ -559,4 +742,12 @@ export class SwitchClient {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asStringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function asNumArray(value: unknown): number[] {
+  return Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [];
 }
