@@ -170,8 +170,50 @@ export interface MacTableResult {
   readable: boolean;
   count: number;
   entries: MacTableEntry[];
-  source: "js_object" | "html_table" | "none";
+  source: "js_object" | "html_table" | "mac_search" | "none";
   note?: string;
+  tip?: string | null;
+}
+
+export function parseMacSearchPage(html: string): MacTableResult {
+  const raw = extractJsObject(html, "mac_ds");
+  const tip = extractJsStringVar(html, "tip");
+
+  if (raw) {
+    const count = asNumber(raw.macNum) ?? 0;
+    const info = Array.isArray(raw.mac_info) ? raw.mac_info.filter(isRecord) : [];
+    const entries = info.slice(0, count).flatMap((entry) => {
+      const mac = normalizeMac(entry.mac);
+      if (!mac) return [];
+      return [{
+        mac,
+        vlan: asNumber(entry.vid),
+        port: asNumber(entry.port),
+        type: null,
+      }];
+    });
+
+    return {
+      readable: true,
+      count: entries.length,
+      entries,
+      source: "mac_search",
+      tip,
+      note: tip || (entries.length === 0 ? "MAC search completed; no matching entries were returned." : undefined),
+    };
+  }
+
+  const tableResult = parseMacTableFromHtml(html);
+  if (tableResult) return { ...tableResult, tip };
+
+  return {
+    readable: false,
+    count: 0,
+    entries: [],
+    source: "none",
+    tip,
+    note: "Could not locate a MAC search result on the page.",
+  };
 }
 
 // The MAC address table page (MacSearchRpm.htm) is not part of the captured
@@ -491,6 +533,7 @@ export function looksLikeLoginPage(text: string): boolean {
 export function extractToken(html: string): string | null {
   const patterns = [
     /(?:top\.)?g_tid\s*=\s*["']([^"']+)["']/i,
+    /(?:top\.)?g_tid\s*=\s*([A-Za-z0-9_-]+)(?=[\s;<]|$)/i,
     /name=["']token["'][^>]*value=["']([^"']+)["']/i,
     /value=["']([^"']+)["'][^>]*name=["']token["']/i,
   ];
@@ -580,6 +623,11 @@ function findMatchingBrace(text: string, start: number): number {
 function extractJsNumber(html: string, name: string): number | null {
   const match = html.match(new RegExp(`var\\s+${name}\\s*=\\s*"?(-?\\d+)"?`, "m"));
   return match ? Number(match[1]) : null;
+}
+
+function extractJsStringVar(html: string, name: string): string | null {
+  const match = new RegExp(`var\\s+${name}\\s*=\\s*(["'])((?:\\\\.|(?!\\1)[\\s\\S])*)\\1`, "m").exec(html);
+  return match?.[2] ? unescapeJsString(match[2]) : null;
 }
 
 function looksLikeSaveConfigAction(action: string, context: string): boolean {

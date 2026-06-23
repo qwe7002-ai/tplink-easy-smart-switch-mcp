@@ -60,6 +60,7 @@ function stripSessionData(html: string): string {
   return html
     // Remove token values (top.g_tid assignments)
     .replace(/((?:top\.)?g_tid\s*=\s*["'])[^"']+(?=["'])/gi, "$1<redacted>")
+    .replace(/((?:top\.)?g_tid\s*=\s*)[A-Za-z0-9_-]+(?=[\s;<]|$)/gi, "$1<redacted>")
     // Remove cookie values from any document.cookie assignments
     .replace(/(document\.cookie\s*=\s*["'])[^"']+(?=["'])/gi, "$1<redacted>");
 }

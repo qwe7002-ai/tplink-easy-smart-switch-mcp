@@ -12,7 +12,7 @@ function jsonResult(data: unknown) {
 
 const server = new McpServer({
   name: "tplink-easy-smart-switch-mcp",
-  version: "0.4.8",
+  version: "0.4.9",
 });
 
 const connectionInput = {
@@ -33,6 +33,54 @@ const writeInputBase = {
 function resolveInput<T extends { host?: string; username?: string; password?: string }>(input: T): T {
   const resolved = resolveCredentials(input.host, input.username, input.password);
   return { ...input, ...resolved };
+}
+
+type TopologyFacts = Awaited<ReturnType<SwitchClient["collectTopologyFacts"]>>;
+type MacSearchResult = Awaited<ReturnType<SwitchClient["searchMacAddressInSession"]>>["mac_search"];
+
+async function addPeerMacSearchEvidence(contexts: Array<{ client: SwitchClient; facts: TopologyFacts }>) {
+  const tasks: Array<Promise<void>> = [];
+
+  for (const context of contexts) {
+    for (const peer of contexts) {
+      if (context === peer || !peer.facts.identity.mac) continue;
+      tasks.push(
+        context.client.searchMacAddressInSession(peer.facts.identity.mac)
+          .then((result) => mergeMacSearchEvidence(context.facts, result.mac_search))
+          .catch((error) => {
+            const message = error instanceof Error ? error.message : String(error);
+            context.facts.mac_table = {
+              ...context.facts.mac_table,
+              note: [context.facts.mac_table.note, `MAC search failed: ${message}`].filter(Boolean).join(" "),
+            };
+          }),
+      );
+    }
+  }
+
+  await Promise.all(tasks);
+}
+
+function mergeMacSearchEvidence(facts: TopologyFacts, macSearch: MacSearchResult): void {
+  if (!macSearch.readable) return;
+
+  const entries = [...facts.mac_table.entries];
+  const seen = new Set(entries.map((entry) => `${entry.mac}|${entry.vlan ?? ""}|${entry.port ?? ""}`));
+  for (const entry of macSearch.entries) {
+    const key = `${entry.mac}|${entry.vlan ?? ""}|${entry.port ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push(entry);
+  }
+
+  facts.mac_table = {
+    ...facts.mac_table,
+    readable: true,
+    count: entries.length,
+    entries,
+    source: facts.mac_table.source === "none" ? "mac_search" : facts.mac_table.source,
+    note: [facts.mac_table.note, macSearch.note].filter(Boolean).join(" "),
+  };
 }
 
 server.registerTool(
@@ -106,16 +154,26 @@ server.registerTool(
 );
 
 server.registerTool(
-  "get_mac_table",
+  "search_mac_address",
   {
-    title: "Get MAC Address Table",
-    description: "Read the switch MAC address (forwarding) table from MacSearchRpm.htm. Returns which MAC addresses are learned on which ports/VLANs. Useful for tracing what is connected to each port.",
-    inputSchema: connectionInput,
+    title: "Search MAC Address",
+    description: "Run the switch Web UI's read-only MAC address search CGI and return the learned port/VLAN for one MAC address when the switch has an entry.",
+    inputSchema: {
+      ...connectionInput,
+      mac: z.string().describe("MAC address to search, for example 00:11:22:33:44:55."),
+      vlan: z.number().int().min(0).max(4094).optional().describe("Optional VLAN ID. Defaults to 0, which matches the Web UI's all/default search behavior on tested firmware."),
+    },
   },
   async (input) => {
     const r = resolveInput(input);
     const client = new SwitchClient(r.host);
-    return jsonResult(await client.getMacTable(r.username, r.password, r.debug ?? false));
+    return jsonResult(await client.searchMacAddress({
+      username: r.username,
+      password: r.password,
+      mac: r.mac,
+      vlan: r.vlan,
+      debug: r.debug ?? false,
+    }));
   },
 );
 
@@ -124,7 +182,7 @@ server.registerTool(
   {
     title: "Analyze Switch Topology",
     description:
-      "Analyze the topology relationship between two (or more) cascaded switches. Logs into each switch, reads its identity, ports, 802.1Q VLAN/PVID and MAC address table, then finds the inter-switch link port, infers the upstream/downstream relationship, and reports the VLAN relationship across the link. Link detection relies on each switch having learned the other's management MAC; if the MAC tables are unreadable it falls back to the active SFP/10G port as a low-confidence guess.",
+      "Analyze the topology relationship between two (or more) cascaded switches. Logs into each switch, reads its identity, ports, 802.1Q VLAN/PVID, and MAC evidence, then finds the inter-switch link port, infers the upstream/downstream relationship, and reports the VLAN relationship across the link. Link detection queries each switch for the other's management MAC when supported; otherwise it falls back to the active SFP/10G port as a low-confidence guess.",
     inputSchema: {
       hosts: z.array(z.string()).min(2).optional().describe('The switches to analyze, by configured name or address, for example ["192.168.3.10", "192.168.3.11"]. Defaults to the two switches in the local config when omitted.'),
       username: z.string().optional().describe("Shared login username, used when a switch has no per-switch credentials in the config."),
@@ -141,15 +199,17 @@ server.registerTool(
       });
     }
 
-    const facts = await Promise.all(
+    const contexts = await Promise.all(
       hosts.map(async (host) => {
         const r = resolveCredentials(host, input.username, input.password);
         const client = new SwitchClient(r.host);
-        return client.collectTopologyFacts(r.username, r.password);
+        const facts = await client.collectTopologyFacts(r.username, r.password);
+        return { client, facts };
       }),
     );
+    await addPeerMacSearchEvidence(contexts);
 
-    return jsonResult(analyzeTopology(facts));
+    return jsonResult(analyzeTopology(contexts.map((context) => context.facts)));
   },
 );
 

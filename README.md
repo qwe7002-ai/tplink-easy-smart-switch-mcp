@@ -20,6 +20,7 @@ Other TP-Link or Mercury Easy Smart switches may work if they use the same Web U
 - Login fields are `username` and encrypted `password`
 - Login page loads `/cryp_new.js`
 - Known Web UI variables include `g_product`, `g_year`, and `encryptType`
+- Some firmware exposes the request token as a bare numeric assignment such as `g_tid=1320064778;` instead of a quoted string. Other pages may only reference `top.g_tid`, so parsers must distinguish assignments from references.
 
 ## Tools
 
@@ -29,16 +30,16 @@ Read-only tools:
 - `get_port_status`: Return port status
 - `get_vlan_status`: Return port VLAN, 802.1Q VLAN, PVID, and MTU VLAN status
 - `get_trunk_status`: Return port trunking/LAG status
-- `get_mac_table`: Return the MAC address (forwarding) table from `MacSearchRpm.htm`
+- `search_mac_address`: Query `mac_address_search.cgi` for one MAC address and return the learned port/VLAN when the switch has an entry
 - `analyze_topology`: Analyze two or more cascaded switches and report the inter-switch link port, the upstream/downstream relationship, and the VLAN relationship across the link
 
-Topology analysis works by logging into each switch and correlating their MAC
-address tables: the port on switch A that has learned switch B's management MAC
-(and vice versa) is the inter-switch link. The downstream switch is the one
-whose link port has learned more of the network's MAC addresses. When the MAC
-table cannot be read, link detection falls back to the active SFP/10G port on
-each switch as a low-confidence guess. These Easy Smart switches have no LLDP,
-so this in-band correlation is the available signal.
+Topology analysis works by logging into each switch and querying the MAC search
+CGI for the peer switch's management MAC. If a switch reports the peer MAC on a
+port, that port is used as inter-switch link evidence. When MAC search cannot
+confirm the link, detection falls back to active SFP/10G port pairs as a
+low-confidence guess, preferring VLAN overlap and using live traffic as a
+tiebreaker. These Easy Smart switches have no LLDP, so this in-band correlation
+is the available signal.
 
 Configuration CGI tools:
 
@@ -154,5 +155,9 @@ bun run debug -- --raw '{ "jsonrpc": "2.0", "id": 99, "method": "tools/list", "p
 ## Notes
 
 Page content is parsed with a DOM parser and normalized into title, form, frame, link, table, and text summaries. Status data is mainly extracted from JavaScript variables in pages such as `MainRpm.htm`, `VlanPortBasicRpm.htm`, `Vlan8021QRpm.htm`, `Vlan8021QPvidRpm.htm`, `VlanMtuRpm.htm`, and `PortTrunkRpm.htm`.
+
+On the tested TP-Link TL-SE2106 and Mercury SE106 Pro firmware, `MacSearchRpm.htm` is a search form rather than a full forwarding-table dump. The supported MAC feature is therefore `search_mac_address`, which follows the page logic and calls `mac_address_search.cgi` with `txt_macAddress_search`, `txt_vid_search`, and `token`.
+
+Token extraction supports quoted `g_tid`, bare numeric `g_tid`, and hidden `token` inputs. The capture script redacts both quoted and bare `g_tid` assignments before saving development samples.
 
 Configuration CGI calls use an explicit confirmation flow. Development and debugging default to dry-run. `save_configuration` is also a write action; it follows the page logic from `SavingConfigRpm.htm` and uses `POST savingconfig.cgi`, but it does not submit unless explicitly confirmed.

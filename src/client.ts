@@ -9,6 +9,8 @@ import {
   parsePvidPage,
   parsePortTrunkPage,
   parseMacTablePage,
+  parseMacSearchPage,
+  normalizeMac,
   formatHtmlPage,
   discoverSaveConfigEndpoint,
   describeWriteEndpoints,
@@ -217,17 +219,79 @@ export class SwitchClient {
     };
   }
 
-  async getMacTable(username?: string, password?: string, debug = false) {
-    const login = await this.loginIfPossible(username, password);
-    const result = await this.readMacTable();
+  async searchMacAddress(input: {
+    username?: string;
+    password?: string;
+    mac: string;
+    vlan?: number;
+    debug?: boolean;
+  }) {
+    const login = await this.loginIfPossible(input.username, input.password);
+    const result = await this.searchMacAddressInSession(input.mac, input.vlan, input.debug ?? false);
+
+    return {
+      ...result,
+      login: summarizeLogin(login),
+    };
+  }
+
+  async searchMacAddressInSession(mac: string, vlan?: number, debug = false) {
+    const normalizedMac = normalizeMac(mac);
+    if (!normalizedMac) {
+      return {
+        target: this.target.origin,
+        reachable: true,
+        query: { mac, normalized_mac: null, vlan: vlan ?? 0 },
+        token_read: false,
+        mac_search: {
+          readable: false,
+          count: 0,
+          entries: [],
+          source: "none" as const,
+          note: "Invalid MAC address. Expected six hexadecimal octets separated by ':' or '-'.",
+        },
+        source: { path: "/mac_address_search.cgi", status: null },
+      };
+    }
+
+    const token = await this.readToken();
+    if (!token) {
+      return {
+        target: this.target.origin,
+        reachable: true,
+        query: { mac: normalizedMac, vlan: vlan ?? 0 },
+        token_read: false,
+        mac_search: {
+          readable: false,
+          count: 0,
+          entries: [],
+          source: "none" as const,
+          note: "Could not read top.g_tid/token from the switch before running MAC search.",
+        },
+        source: { path: "/mac_address_search.cgi", status: null },
+      };
+    }
+
+    const params = new URLSearchParams({
+      txt_macAddress_search: normalizedMac,
+      txt_vid_search: String(vlan ?? 0),
+      token,
+    });
+    const response = await this.fetch(`/mac_address_search.cgi?${params.toString()}`, {
+      method: "GET",
+      headers: { Referer: `${this.target.origin}/MacSearchRpm.htm` },
+    });
+    rememberCookies(this.target, response);
+    const parsed = parseMacSearchPage(response.body);
 
     return {
       target: this.target.origin,
       reachable: true,
-      login: summarizeLogin(login),
-      mac_table: result.mac_table,
-      source: { path: result.path, status: result.status },
-      ...(debug ? { debug: { page: formatHtmlPage(result.rawBody) } } : {}),
+      query: { mac: normalizedMac, vlan: vlan ?? 0 },
+      token_read: true,
+      mac_search: parsed,
+      source: { path: "/mac_address_search.cgi", status: response.status },
+      ...(debug ? { debug: { page: formatHtmlPage(response.body) } } : {}),
     };
   }
 
@@ -314,6 +378,8 @@ export class SwitchClient {
         link_up: typeof p.actual_speed_code === "number" && p.actual_speed_code > 0,
         type: typeof p.type === "string" ? p.type : "unknown",
         speed_code: typeof p.actual_speed_code === "number" ? p.actual_speed_code : null,
+        rx_mbps: typeof p.rx_mbps === "number" ? p.rx_mbps : null,
+        tx_mbps: typeof p.tx_mbps === "number" ? p.tx_mbps : null,
       })),
       qvlan_enabled: typeof qvlanData?.enabled === "boolean" ? qvlanData.enabled : null,
       vlans: vlans.filter(isRecord).map((v) => ({
