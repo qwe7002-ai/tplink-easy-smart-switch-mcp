@@ -1,0 +1,38 @@
+{
+  "name": "tplink-easy-smart-switch-mcp",
+  "version": "0.4.9",
+  "description": "Inspect and safely configure TP-Link and Mercury Easy Smart switches through a local MCP server and guided workflow.",
+  "author": {
+    "name": "qwe7002-ai",
+    "email": "qwe7002.ai@gmail.com",
+    "url": "https://github.com/qwe7002-ai"
+  },
+  "homepage": "https://github.com/qwe7002-ai/tplink-easy-smart-switch-mcp",
+  "repository": "https://github.com/qwe7002-ai/tplink-easy-smart-switch-mcp",
+  "keywords": [
+    "tp-link",
+    "mercury",
+    "easy-smart-switch",
+    "networking",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "TP-Link Easy Smart Switch",
+    "shortDescription": "Safely inspect and configure Easy Smart switches.",
+    "longDescription": "Inspect switch, port, VLAN, PVID, trunk, MAC, and topology state on supported TP-Link and Mercury Easy Smart switches, then preview and apply guarded configuration changes.",
+    "developerName": "qwe7002-ai",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/qwe7002-ai/tplink-easy-smart-switch-mcp",
+    "defaultPrompt": [
+      "Inspect my TP-Link switch and summarize its current status.",
+      "Review my switch VLAN and trunk configuration for problems.",
+      "Preview this switch configuration change and apply it safely."
+    ]
+  }
+}

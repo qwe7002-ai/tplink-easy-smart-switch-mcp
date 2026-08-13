@@ -4,6 +4,19 @@ TypeScript + Bun MCP server for TP-Link and Mercury Easy Smart switches. It work
 
 Default target: `http://192.168.3.10`
 
+## Install as a Codex Plugin
+
+Install [Bun](https://bun.sh/) first, then add the independent network-tools
+marketplace and this plugin:
+
+```powershell
+codex plugin marketplace add qwe7002-ai/net-tool-plugins --ref main
+codex plugin add tplink-easy-smart-switch-mcp@net-tool-plugins
+```
+
+Start a new Codex task after installation so the MCP tools and switch-management
+skill are loaded.
+
 ## Tested Models
 
 The current implementation has been tested against these Web UI snapshots and read-only status calls:

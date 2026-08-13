@@ -13,6 +13,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate Codex plugin packaging
+        run: |
+          python3 -m json.tool .codex-plugin/plugin.json >/dev/null
+          python3 -m json.tool .mcp.json >/dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path(".codex-plugin/plugin.json").read_text())
+          package = json.loads(Path("package.json").read_text())
+          mcp = json.loads(Path(".mcp.json").read_text())
+          skill = Path("skills/manage-tplink-easy-smart-switches/SKILL.md").read_text()
+
+          assert manifest["name"] == package["name"]
+          assert manifest["version"] == package["version"]
+          assert manifest["skills"] == "./skills/"
+          assert manifest["mcpServers"] == "./.mcp.json"
+          assert "tplink-easy-smart-switch-mcp" in mcp["mcpServers"]
+          assert "[TODO:" not in skill
+          assert skill.startswith("---\nname: manage-tplink-easy-smart-switches\n")
+          PY
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest

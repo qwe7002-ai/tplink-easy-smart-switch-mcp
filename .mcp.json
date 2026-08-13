@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "tplink-easy-smart-switch-mcp": {
+      "command": "bun",
+      "args": [
+        "run",
+        "src/index.ts"
+      ],
+      "cwd": "${PLUGIN_ROOT}",
+      "startup_timeout_sec": 60,
+      "tool_timeout_sec": 60
+    }
+  }
+}
